@@ -149,9 +149,9 @@ function ConfirmDelete({ label, onCancel, onConfirm, busy, mobile }) {
 }
 
 /* ───────── FORMULAIRES (création + modification) ───────── */
-function ProfileForm({ initial, onClose, onSave, mobile, busy }) {
+function ProfileForm({ initial, onClose, onSave, mobile, busy, clients = [] }) {
   const [f, setF] = useState(() => ({
-    photo: initial?.photo ?? null,
+    photo: initial?.photo ?? null, client: initial?.client ?? "",
     nom: initial?.nom ?? "", prenom: initial?.prenom ?? "", age: initial?.age && initial.age !== "—" ? initial.age : "",
     dn: initial?.dn ?? "", lieu: initial?.lieu ?? "", prof: initial?.prof ?? "",
     groupe: initial?.groupe && initial.groupe !== "—" ? initial.groupe : "", anc: initial?.anc ?? "",
@@ -183,7 +183,8 @@ function ProfileForm({ initial, onClose, onSave, mobile, busy }) {
   const grid = { display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 14 };
   const submit = () => {
     if (!f.nom.trim() || !f.prenom.trim()) { alert("Nom et prénom obligatoires."); return; }
-    onSave({ ...f, age: f.age || "—", casier: f.casier || "Vierge", police: f.police || "Aucun contact", crime: f.crime || "Aucune liaison", groupe: f.groupe || "—" }, initial?.id);
+    const linked = (f.statut === "reserve" || f.statut === "vendu") && f.client && f.client !== "—" ? f.client : "";
+    onSave({ ...f, client: linked, age: f.age || "—", casier: f.casier || "Vierge", police: f.police || "Aucun contact", crime: f.crime || "Aucune liaison", groupe: f.groupe || "—" }, initial?.id);
   };
   return (
     <Modal title={initial ? "Modifier le profil" : "Nouveau profil"} onClose={onClose} onSubmit={submit} submitLabel={initial ? "Enregistrer" : "Créer le dossier"} mobile={mobile} busy={busy}>
@@ -226,6 +227,15 @@ function ProfileForm({ initial, onClose, onSave, mobile, busy }) {
           </div>
         </Field>
       </div>
+      {(f.statut === "reserve" || f.statut === "vendu") && (
+        <div style={{ marginTop: 14 }}>
+          <Field label={f.statut === "reserve" ? "Réservé pour (client)" : "Vendu à (client)"} full>
+            {clients.length
+              ? <Select value={f.client || "—"} onChange={up("client")} options={["—", ...clients.map((c) => c.groupe)]} />
+              : <TextInput value={f.client} onChange={up("client")} placeholder="Aucun client — ajoutez-en dans Gestion des clients" />}
+          </Field>
+        </div>
+      )}
       <SectionLabel>Renseignement</SectionLabel>
       <div style={{ display: "grid", gap: 14 }}>
         <Field label="Casier judiciaire" full><TextInput value={f.casier} onChange={up("casier")} placeholder="Vierge" /></Field>
@@ -260,10 +270,15 @@ function ClientForm({ initial, onClose, onSave, mobile, busy }) {
   );
 }
 
-function SaleForm({ initial, onClose, onSave, clients, mobile, busy }) {
-  const [f, setF] = useState(() => ({ date: initial?.date ?? new Date().toISOString().slice(0, 10), client: initial?.client ?? (clients[0]?.groupe || ""), type: initial?.type ?? "Catalogue", prix: initial?.prix != null ? String(initial.prix) : "", resp: initial?.resp ?? "Atlas", statut: initial?.statut ?? "Réglée" }));
+function SaleForm({ initial, onClose, onSave, clients, identities = [], mobile, busy }) {
+  const [f, setF] = useState(() => ({ date: initial?.date ?? new Date().toISOString().slice(0, 10), client: initial?.client ?? (clients[0]?.groupe || ""), identity_id: initial?.identity_id ?? "", identity: initial?.identity ?? "", type: initial?.type ?? "Catalogue", prix: initial?.prix != null ? String(initial.prix) : "", resp: initial?.resp ?? "Atlas", statut: initial?.statut ?? "Réglée" }));
   const up = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const grid = { display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 14 };
+  const avail = identities.filter((p) => (p.statut !== "vendu" && p.statut !== "archive") || p.id === f.identity_id);
+  const pickIdentity = (e) => {
+    const id = e.target.value; const it = identities.find((x) => x.id === id);
+    setF((prev) => ({ ...prev, identity_id: id, identity: it ? `${it.ref} — ${it.prenom} ${it.nom}` : "" }));
+  };
   const submit = () => {
     if (!f.client.trim()) { alert("Sélectionnez ou saisissez un client."); return; }
     if (!f.prix || isNaN(+f.prix)) { alert("Prix invalide."); return; }
@@ -272,13 +287,20 @@ function SaleForm({ initial, onClose, onSave, clients, mobile, busy }) {
   return (
     <Modal title={initial ? "Modifier la vente" : "Nouvelle vente"} onClose={onClose} onSubmit={submit} submitLabel={initial ? "Enregistrer" : "Enregistrer la vente"} mobile={mobile} busy={busy}>
       <div style={grid}>
-        <Field label="Date"><input type="date" value={f.date} onChange={up("date")} style={{ ...inputBase, fontFamily: "JetBrains Mono", fontSize: 12 }} /></Field>
         <Field label="Client">{clients.length ? <Select value={f.client} onChange={up("client")} options={clients.map((c) => c.groupe)} /> : <TextInput value={f.client} onChange={up("client")} placeholder="Nom du client" />}</Field>
-        <Field label="Type de vente"><Select value={f.type} onChange={up("type")} options={["Catalogue", "Sur-Mesure"]} /></Field>
+        <Field label="Identité vendue">
+          <select value={f.identity_id} onChange={pickIdentity} style={{ ...inputBase, fontFamily: "JetBrains Mono", fontSize: 12, cursor: "pointer" }}>
+            <option value="" style={{ background: T.bg }}>— Aucune —</option>
+            {avail.map((it) => <option key={it.id} value={it.id} style={{ background: T.bg }}>{it.ref} — {it.prenom} {it.nom}</option>)}
+          </select>
+        </Field>
         <Field label="Prix ($)"><TextInput value={f.prix} onChange={up("prix")} placeholder="22000" inputMode="numeric" /></Field>
-        <Field label="Responsable"><TextInput value={f.resp} onChange={up("resp")} /></Field>
+        <Field label="Date de vente"><input type="date" value={f.date} onChange={up("date")} style={{ ...inputBase, fontFamily: "JetBrains Mono", fontSize: 12 }} /></Field>
+        <Field label="Type de vente"><Select value={f.type} onChange={up("type")} options={["Catalogue", "Sur-Mesure"]} /></Field>
         <Field label="Statut"><Select value={f.statut} onChange={up("statut")} options={["Réglée", "Acompte", "Litige"]} /></Field>
+        <Field label="Responsable" full><TextInput value={f.resp} onChange={up("resp")} /></Field>
       </div>
+      {f.identity_id && <div style={{ marginTop: 14, fontSize: 12, color: T.textDim, fontFamily: "JetBrains Mono", display: "flex", alignItems: "center", gap: 7, lineHeight: 1.4 }}><AlertTriangle size={14} style={{ color: T.gold, flexShrink: 0 }} />L'identité sélectionnée passera automatiquement en « Vendu » et sera reliée au client.</div>}
     </Modal>
   );
 }
@@ -313,6 +335,11 @@ function ProfileSheet({ p, onClose, onEdit, onDelete, mobile }) {
                 <Badge color={r.c} solid={r.solid}>{r.label}</Badge>
                 <Badge color={STATUS[p.statut].c}>{STATUS[p.statut].label}</Badge>
               </div>
+              {(p.statut === "reserve" || p.statut === "vendu") && p.client && (
+                <div style={{ marginTop: 10, fontFamily: "JetBrains Mono", fontSize: 10.5, letterSpacing: 1, color: T.gold }}>
+                  {p.statut === "reserve" ? "RÉSERVÉ À" : "VENDU À"} · <span style={{ color: T.text }}>{p.client}</span>
+                </div>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
@@ -379,6 +406,7 @@ function ProfileCard({ p, onClick }) {
             <Badge color={r.c} solid={r.solid}>{r.label}</Badge>
             <Badge color={STATUS[p.statut].c}>{STATUS[p.statut].label}</Badge>
           </div>
+          {(p.statut === "reserve" || p.statut === "vendu") && p.client && <div style={{ marginTop: 7, fontFamily: "JetBrains Mono", fontSize: 9.5, color: T.textDim }}>{p.statut === "reserve" ? "→ Réservé" : "→ Vendu"} · {p.client}</div>}
         </div>
       </div>
     </div>
@@ -573,12 +601,13 @@ function Sales({ sales, openAdd, onEdit, onDelete }) {
       ) : (
         <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 8, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-            <thead><tr style={{ borderBottom: `1px solid ${T.line}` }}>{["Réf", "Date", "Client", "Type", "Prix", "Responsable", "Statut", ""].map((h, i) => <th key={i} style={{ textAlign: i === 4 ? "right" : "left", padding: "12px 16px", fontFamily: "JetBrains Mono", fontSize: 9.5, letterSpacing: 1, color: T.textDim, fontWeight: 500 }}>{h.toUpperCase()}</th>)}</tr></thead>
+            <thead><tr style={{ borderBottom: `1px solid ${T.line}` }}>{["Réf", "Date", "Client", "Identité", "Type", "Prix", "Responsable", "Statut", ""].map((h, i) => <th key={i} style={{ textAlign: i === 5 ? "right" : "left", padding: "12px 16px", fontFamily: "JetBrains Mono", fontSize: 9.5, letterSpacing: 1, color: T.textDim, fontWeight: 500 }}>{h.toUpperCase()}</th>)}</tr></thead>
             <tbody>{[...sales].reverse().map((s) => (
               <tr key={s.id} className="trow" style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
                 <td style={{ padding: "13px 16px", fontFamily: "JetBrains Mono", fontSize: 11.5, color: T.textFaint }}>{s.ref}</td>
                 <td style={{ padding: "13px 16px", fontFamily: "JetBrains Mono", fontSize: 12.5, color: T.textDim }}>{s.date}</td>
                 <td style={{ padding: "13px 16px", fontSize: 13.5 }}>{s.client}</td>
+                <td style={{ padding: "13px 16px", fontFamily: "JetBrains Mono", fontSize: 11.5, color: T.textDim }}>{s.identity || "—"}</td>
                 <td style={{ padding: "13px 16px" }}><Badge color={s.type === "Sur-Mesure" ? T.gold : T.textDim}>{(s.type || "").toUpperCase()}</Badge></td>
                 <td style={{ padding: "13px 16px", textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 13, color: T.gold }}>{fmt(s.prix)}</td>
                 <td style={{ padding: "13px 16px", fontFamily: "JetBrains Mono", fontSize: 12.5, color: T.textDim }}>{s.resp}</td>
@@ -771,7 +800,10 @@ function MainApp({ session }) {
     setBusy(true);
     if (id) await supabase.from("sales").update(values).eq("id", id);
     else await supabase.from("sales").insert({ ...values, ref: "V-" + pad(1001 + sales.length, 4) });
-    await fetchSales(); setBusy(false); setModal(null);
+    if (values.identity_id) {
+      await supabase.from("identities").update({ statut: "vendu", client: values.client || "" }).eq("id", values.identity_id);
+    }
+    await Promise.all([fetchSales(), fetchProfiles()]); setBusy(false); setModal(null);
   };
 
   const doDelete = async () => {
@@ -888,9 +920,9 @@ function MainApp({ session }) {
       </div>
 
       {open && <ProfileSheet p={open} onClose={() => setOpen(null)} mobile={mobile} onEdit={(p) => { setModal({ type: "profile", data: p }); setOpen(null); }} onDelete={(p) => setConfirm({ kind: "identity", id: p.id, label: `${p.prenom} ${p.nom}` })} />}
-      {modal?.type === "profile" && <ProfileForm initial={modal.data} onClose={() => setModal(null)} onSave={saveProfile} mobile={mobile} busy={busy} />}
+      {modal?.type === "profile" && <ProfileForm initial={modal.data} onClose={() => setModal(null)} onSave={saveProfile} clients={clients} mobile={mobile} busy={busy} />}
       {modal?.type === "client" && <ClientForm initial={modal.data} onClose={() => setModal(null)} onSave={saveClient} mobile={mobile} busy={busy} />}
-      {modal?.type === "sale" && <SaleForm initial={modal.data} onClose={() => setModal(null)} onSave={saveSale} clients={clients} mobile={mobile} busy={busy} />}
+      {modal?.type === "sale" && <SaleForm initial={modal.data} onClose={() => setModal(null)} onSave={saveSale} clients={clients} identities={profiles} mobile={mobile} busy={busy} />}
       {confirm && <ConfirmDelete label={confirm.label} onCancel={() => setConfirm(null)} onConfirm={doDelete} busy={busy} mobile={mobile} />}
     </div>
   );

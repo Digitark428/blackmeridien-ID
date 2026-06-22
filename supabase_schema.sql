@@ -29,6 +29,7 @@ create table if not exists identities (
   police     text,
   crime      text,
   notes      text,
+  client     text,
   created_at timestamptz default now()
 );
 
@@ -52,6 +53,8 @@ create table if not exists sales (
   prix       numeric,
   resp       text,
   statut     text,
+  identity_id uuid,
+  identity   text,
   created_at timestamptz default now()
 );
 
