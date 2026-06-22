@@ -650,24 +650,38 @@ function Login() {
   };
   const onKey = (e) => { if (e.key === "Enter") submit(); };
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, color: T.text, fontFamily: "Space Grotesk", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "min(400px,100%)" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <img src={LOGO} alt="Black Meridian" style={{ width: 92, height: 92, objectFit: "contain", marginBottom: 16 }} />
-          <div style={{ fontFamily: "Space Grotesk", fontSize: 24, fontWeight: 700, letterSpacing: 3 }}>BLACK MERIDIAN</div>
-          <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, letterSpacing: 4, color: T.gold, marginTop: 6 }}>IDENTITY BUSINESS</div>
+    <div style={{ minHeight: "100vh", background: T.bg, color: T.text, fontFamily: "Space Grotesk", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, position: "relative", overflow: "hidden" }}>
+      {/* ambiance */}
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 22%, rgba(201,168,76,.07), transparent 55%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.35) 3px)", opacity: .22, pointerEvents: "none" }} />
+
+      <div style={{ width: "min(440px,100%)", position: "relative" }}>
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <img src={LOGO} alt="Black Meridian" style={{ width: 112, height: 112, objectFit: "contain", marginBottom: 14, filter: "drop-shadow(0 0 22px rgba(201,168,76,.28))" }} />
+          <div style={{ fontFamily: "Space Grotesk", fontSize: 27, fontWeight: 700, letterSpacing: 5 }}>BLACK MERIDIAN</div>
+          <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, letterSpacing: 5, color: T.gold, marginTop: 8 }}>IDENTITY BUSINESS</div>
         </div>
+
+        {/* avertissement */}
+        <div style={{ display: "flex", gap: 13, padding: "16px 18px", marginBottom: 20, borderRadius: 10, background: "linear-gradient(90deg, rgba(176,65,59,.12), rgba(176,65,59,0))", border: `1px solid ${T.danger}33`, borderLeft: `3px solid ${T.danger}` }}>
+          <AlertTriangle size={20} style={{ color: T.danger, flexShrink: 0, marginTop: 3 }} />
+          <div>
+            <div style={{ fontFamily: "JetBrains Mono", fontSize: 9.5, letterSpacing: 2.5, color: T.danger, marginBottom: 7 }}>AVERTISSEMENT</div>
+            <div style={{ fontFamily: "Space Grotesk", fontSize: 18.5, fontWeight: 600, lineHeight: 1.4, color: T.text }}>Une fois entré dans cette base de données, plus aucun retour en arrière n'est possible.</div>
+          </div>
+        </div>
+
         <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 12, padding: 24 }}>
           <div style={{ display: "grid", gap: 14 }}>
-            <Field label="Nom d'utilisateur"><TextInput value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={onKey} placeholder="Black Meridian V7" autoFocus /></Field>
+            <Field label="Identifiant"><TextInput value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={onKey} placeholder="Black Meridian V7" autoFocus /></Field>
             <Field label="Mot de passe"><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onKey} placeholder="••••••••" style={inputBase} /></Field>
             {err && <div style={{ color: T.danger, fontSize: 12.5, fontFamily: "JetBrains Mono" }}>{err}</div>}
-            <button onClick={submit} disabled={busy} style={{ marginTop: 4, fontFamily: "Space Grotesk", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 15px", borderRadius: 8, color: T.bg, background: T.gold, border: "none", opacity: busy ? .7 : 1 }}>
-              {busy ? <Loader2 size={16} className="spin" /> : <Lock size={15} />}Connexion
+            <button onClick={submit} disabled={busy} style={{ marginTop: 4, fontFamily: "Space Grotesk", fontSize: 14, fontWeight: 700, letterSpacing: 1, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 15px", borderRadius: 8, color: T.bg, background: T.gold, border: "none", opacity: busy ? .7 : 1 }}>
+              {busy ? <Loader2 size={16} className="spin" /> : <Lock size={15} />}ENTRER
             </button>
           </div>
         </div>
-        <div style={{ textAlign: "center", marginTop: 18, fontFamily: "JetBrains Mono", fontSize: 9.5, letterSpacing: 1, color: T.textFaint }}>ACCÈS RÉSERVÉ · SESSION CHIFFRÉE</div>
+        <div style={{ textAlign: "center", marginTop: 18, fontFamily: "JetBrains Mono", fontSize: 9.5, letterSpacing: 1.5, color: T.textFaint }}>ACCÈS RESTREINT · SESSION CHIFFRÉE · BLACK MERIDIAN</div>
       </div>
     </div>
   );
